@@ -1,0 +1,31 @@
+name: Build Giffy package
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Check out Giffy
+        uses: actions/checkout@v4
+
+      - name: Set up Theos and the iOS 6.1 SDK
+        uses: beerpiss/theos-action@v1
+        with:
+          theos-sdks: https://github.com/Sn0wCooder/theos-sdks
+
+      - name: Build rootful armv7 package
+        run: make package THEOS_PACKAGE_SCHEME=rootful
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Giffy-deb
+          path: packages/*.deb
+          if-no-files-found: error
+
