@@ -1,0 +1,10 @@
+Package: com.giffy.viewer
+Name: Giffy
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Browse and play animated GIF files.
+Maintainer: Giffy
+Author: Giffy
+Section: Multimedia
+Priority: optional
+Depends: firmware (>= 6.0)
