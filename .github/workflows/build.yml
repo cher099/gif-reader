@@ -22,10 +22,13 @@ jobs:
       - name: Assemble the split iOS 6.1 SDK
         run: |
           sdk_parts="$THEOS/sdks/iPhoneOS6.1.sdk"
+          sdk_unpack="$RUNNER_TEMP/ios6-sdk"
           cat "$sdk_parts"/iPhoneOS6.1.sdk.zip.00* > "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip"
-          unzip -q "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" -d "$THEOS/sdks"
-          test -f "$THEOS/sdks/iPhoneOS6.1.sdk/System/Library/Frameworks/Foundation.framework/Headers/Foundation.h"
+          mkdir -p "$sdk_unpack"
+          unzip -q "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" -d "$sdk_unpack"
           rm -rf "$sdk_parts" "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip"
+          mv "$sdk_unpack/iPhoneOS6.1.sdk" "$THEOS/sdks/iPhoneOS6.1.sdk"
+          test -f "$THEOS/sdks/iPhoneOS6.1.sdk/System/Library/Frameworks/Foundation.framework/Headers/Foundation.h"
 
       - name: Build rootful armv7 package
         run: make package
