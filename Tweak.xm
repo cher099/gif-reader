@@ -238,6 +238,7 @@ static void PGStopGIFPlayersInView(UIView *view) {
 %hook UIImageView
 
 - (void)setImage:(UIImage *)image {
+    PGGIFInstaller *installer = nil;
     if (!PGGIFSettingFrame) {
         PGGIFPlayer *player = [(PGGIFPlayer *)objc_getAssociatedObject(self, &PGGIFPlayerKey) retain];
         if (player) {
@@ -246,10 +247,19 @@ static void PGStopGIFPlayersInView(UIView *view) {
             if (objc_getAssociatedObject(controller, &PGGIFPlayerKey) == player)
                 objc_setAssociatedObject(controller, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             objc_setAssociatedObject(self, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_ASSIGN);
+            if (controller && image)
+                installer = [[PGGIFInstaller alloc] initWithController:controller image:image];
             [player release];
         }
     }
     %orig(image);
+    if (installer) {
+        if ([NSThread isMainThread])
+            [installer performSelector:@selector(install) withObject:nil afterDelay:0.1];
+        else
+            [installer performSelectorOnMainThread:@selector(install) withObject:nil waitUntilDone:NO];
+        [installer release];
+    }
 }
 
 %end

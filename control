@@ -1,6 +1,6 @@
 Package: com.cher099.photosgif
 Name: Photos GIF
-Version: 1.0.9
+Version: 1.0.10
 Architecture: iphoneos-arm
 Description: Play animated GIFs in the iOS Photos app.
 Maintainer: Photos GIF
