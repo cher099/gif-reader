@@ -39,8 +39,24 @@ static UIImage *PGAnimatedGIFForRepresentation(ALAssetRepresentation *representa
     NSString *uti = [[representation UTI] lowercaseString];
     if (![uti isEqualToString:@"com.compuserve.gif"] && ![uti isEqualToString:@"public.gif"])
         return nil;
-    NSURL *url = [representation url];
-    NSData *data = url ? [NSData dataWithContentsOfURL:url] : nil;
+
+    long long length = [representation size];
+    if (length <= 0 || length > 64LL * 1024LL * 1024LL) return nil;
+
+    NSMutableData *data = [NSMutableData dataWithLength:(NSUInteger)length];
+    uint8_t *bytes = (uint8_t *)[data mutableBytes];
+    const NSUInteger chunkSize = 1024 * 1024;
+    long long offset = 0;
+    while (offset < length) {
+        NSUInteger chunk = (NSUInteger)MIN((long long)chunkSize, length - offset);
+        NSError *error = nil;
+        NSUInteger bytesRead = [representation getBytes:bytes + (NSUInteger)offset
+                                              fromOffset:offset
+                                                  length:chunk
+                                                   error:&error];
+        if (error || bytesRead != chunk) return nil;
+        offset += bytesRead;
+    }
     return PGAnimatedGIF(data, 1.0);
 }
 
