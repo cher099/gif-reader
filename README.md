@@ -15,10 +15,10 @@ The included GitHub Actions workflow builds on each push and can also be started
 For a local build, install Theos and an iOS 6.1-capable SDK/toolchain on macOS, then from this directory run:
 
 ```sh
-make package THEOS_PACKAGE_SCHEME=rootful
+make package
 ```
 
-Use a rootful Theos setup: iOS 6 jailbreaks predate rootless packaging. The generated `.deb` is normally placed under `packages/`.
+Rootful is Theos' default package layout, which matches classic iOS 6 jailbreaks. The generated `.deb` is normally placed under `packages/`.
 
 ## Install
 
