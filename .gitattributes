@@ -1,0 +1,2 @@
+# Treat the Logos-preprocessed Objective-C tweak source as Objective-C for GitHub language statistics.
+Tweak.xm linguist-language=Objective-C
