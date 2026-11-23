@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
+#import <math.h>
 #import <string.h>
 
 @interface PLManagedAsset : NSObject
@@ -20,14 +21,44 @@ static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
     if (!source) return nil;
 
     size_t count = CGImageSourceGetCount(source);
-    NSMutableArray *frames = [NSMutableArray arrayWithCapacity:count];
+    if (count < 2) {
+        CFRelease(source);
+        return nil;
+    }
+
+    // UIImage's animated image keeps every decoded frame in memory. Bound that
+    // cost for older devices by sampling long GIFs and downsampling each frame.
+    const size_t maximumFrames = 48;
+    const double maximumDecodedPixels = 6000000.0;
+    size_t stride = (count + maximumFrames - 1) / maximumFrames;
+    if (stride < 1) stride = 1;
+    size_t selectedFrames = (count + stride - 1) / stride;
+
+    size_t sourceWidth = 640;
+    size_t sourceHeight = 960;
+    CFDictionaryRef firstProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, NULL);
+    if (firstProperties) {
+        NSNumber *width = [(NSDictionary *)firstProperties objectForKey:(NSString *)kCGImagePropertyPixelWidth];
+        NSNumber *height = [(NSDictionary *)firstProperties objectForKey:(NSString *)kCGImagePropertyPixelHeight];
+        if ([width respondsToSelector:@selector(unsignedIntegerValue)] && width.unsignedIntegerValue > 0)
+            sourceWidth = width.unsignedIntegerValue;
+        if ([height respondsToSelector:@selector(unsignedIntegerValue)] && height.unsignedIntegerValue > 0)
+            sourceHeight = height.unsignedIntegerValue;
+        CFRelease(firstProperties);
+    }
+    double sourcePixelsPerFrame = (double)sourceWidth * (double)sourceHeight;
+    double downsampleRatio = sqrt(maximumDecodedPixels / ((double)selectedFrames * sourcePixelsPerFrame));
+    if (downsampleRatio > 1.0) downsampleRatio = 1.0;
+    size_t maximumPixelSize = (size_t)floor((double)MAX(sourceWidth, sourceHeight) * downsampleRatio);
+    if (maximumPixelSize < 1) maximumPixelSize = 1;
+    NSDictionary *thumbnailOptions = [NSDictionary dictionaryWithObjectsAndKeys:
+        (id)kCFBooleanTrue, (id)kCGImageSourceCreateThumbnailFromImageAlways,
+        [NSNumber numberWithUnsignedInteger:maximumPixelSize], (id)kCGImageSourceThumbnailMaxPixelSize,
+        nil];
+
+    NSMutableArray *frames = [NSMutableArray arrayWithCapacity:selectedFrames];
     NSTimeInterval duration = 0;
     for (size_t index = 0; index < count; index++) {
-        CGImageRef image = CGImageSourceCreateImageAtIndex(source, index, NULL);
-        if (!image) continue;
-        [frames addObject:[UIImage imageWithCGImage:image scale:scale orientation:UIImageOrientationUp]];
-        CGImageRelease(image);
-
         CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(source, index, NULL);
         NSDictionary *gif = properties ? [(NSDictionary *)properties objectForKey:(NSString *)kCGImagePropertyGIFDictionary] : nil;
         NSNumber *delay = [gif objectForKey:(NSString *)kCGImagePropertyGIFUnclampedDelayTime];
@@ -35,6 +66,13 @@ static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
             delay = [gif objectForKey:(NSString *)kCGImagePropertyGIFDelayTime];
         duration += delay.doubleValue > 0.01 ? delay.doubleValue : 0.1;
         if (properties) CFRelease(properties);
+
+        if (index % stride != 0) continue;
+        CGImageRef image = CGImageSourceCreateThumbnailAtIndex(source, index, (CFDictionaryRef)thumbnailOptions);
+        if (!image) image = CGImageSourceCreateImageAtIndex(source, index, NULL);
+        if (!image) continue;
+        [frames addObject:[UIImage imageWithCGImage:image scale:scale orientation:UIImageOrientationUp]];
+        CGImageRelease(image);
     }
     CFRelease(source);
     if (frames.count < 2) return nil;
