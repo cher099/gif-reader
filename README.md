@@ -2,7 +2,7 @@
 
 Photos GIF is a jailbreak tweak for iPhone 4S on iOS 6.1.3 that adds animated GIF playback to the stock Photos app's full-screen viewer.
 
-Long or large GIFs are frame-sampled and downsampled to limit memory use on older devices. This can make very long animations look less smooth or detailed. The limit is conservative because Photos may keep recently viewed images in memory.
+GIF frames are decoded on demand at their original size. Photos GIF keeps only the current frame decoded and replaces it as playback advances, so it does not need to hold a full animation's decoded frames in memory.
 
 ## Compatibility target
 
@@ -26,3 +26,4 @@ make package
 Install the `.deb` with Cydia or Filza, then open a GIF in the Photos app and view it full-screen. Thumbnail previews may remain static. Opening a GIF directly in iFile is outside this tweak's scope.
 
 The tweak does not add a separate app icon or import/download GIFs. Runtime behavior still needs testing on the target iPhone 4S running iOS 6.1.3.
+

@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
-#import <math.h>
+#import <objc/runtime.h>
 #import <string.h>
 
 @interface PLManagedAsset : NSObject
@@ -12,137 +12,174 @@
 - (void)setFullSizeImage:(id)image;
 @end
 
-static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
-    if (data.length < 6) return nil;
-    const unsigned char *bytes = (const unsigned char *)data.bytes;
-    if (memcmp(bytes, "GIF87a", 6) && memcmp(bytes, "GIF89a", 6)) return nil;
+@interface PGGIFPlayer : NSObject {
+    CGImageSourceRef _source;
+    NSUInteger _frameCount;
+    NSUInteger _frameIndex;
+    UIImageView *_imageView;
+    NSTimer *_timer;
+    CGFloat _imageScale;
+    BOOL _running;
+}
+- (id)initWithData:(NSData *)data imageView:(UIImageView *)imageView scale:(CGFloat)scale;
+- (void)start;
+- (void)stop;
+@end
 
-    CGImageSourceRef source = CGImageSourceCreateWithData((CFDataRef)data, NULL);
-    if (!source) return nil;
+@implementation PGGIFPlayer
 
-    size_t count = CGImageSourceGetCount(source);
-    if (count < 2) {
-        CFRelease(source);
+- (id)initWithData:(NSData *)data imageView:(UIImageView *)imageView scale:(CGFloat)scale {
+    self = [super init];
+    if (!self) return nil;
+
+    NSDictionary *sourceOptions = [NSDictionary dictionaryWithObject:(id)kCFBooleanFalse
+                                                               forKey:(id)kCGImageSourceShouldCache];
+    _source = CGImageSourceCreateWithData((CFDataRef)data, (CFDictionaryRef)sourceOptions);
+    _frameCount = _source ? CGImageSourceGetCount(_source) : 0;
+    if (_frameCount < 2) {
+        [self release];
         return nil;
     }
-
-    // UIImage's animated image keeps every decoded frame in memory. Bound that
-    // cost for older devices by sampling long GIFs and downsampling each frame.
-    const size_t maximumFrames = 40;
-    const double maximumDecodedPixels = 2500000.0;
-    size_t stride = (count + maximumFrames - 1) / maximumFrames;
-    if (stride < 1) stride = 1;
-    size_t selectedFrames = (count + stride - 1) / stride;
-
-    size_t sourceWidth = 640;
-    size_t sourceHeight = 960;
-    CFDictionaryRef firstProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, NULL);
-    if (firstProperties) {
-        NSNumber *width = [(NSDictionary *)firstProperties objectForKey:(NSString *)kCGImagePropertyPixelWidth];
-        NSNumber *height = [(NSDictionary *)firstProperties objectForKey:(NSString *)kCGImagePropertyPixelHeight];
-        if ([width respondsToSelector:@selector(unsignedIntegerValue)] && width.unsignedIntegerValue > 0)
-            sourceWidth = width.unsignedIntegerValue;
-        if ([height respondsToSelector:@selector(unsignedIntegerValue)] && height.unsignedIntegerValue > 0)
-            sourceHeight = height.unsignedIntegerValue;
-        CFRelease(firstProperties);
-    }
-    double sourcePixelsPerFrame = (double)sourceWidth * (double)sourceHeight;
-    double downsampleRatio = sqrt(maximumDecodedPixels / ((double)selectedFrames * sourcePixelsPerFrame));
-    if (downsampleRatio > 1.0) downsampleRatio = 1.0;
-    size_t maximumPixelSize = (size_t)floor((double)MAX(sourceWidth, sourceHeight) * downsampleRatio);
-    if (maximumPixelSize < 1) maximumPixelSize = 1;
-    NSDictionary *thumbnailOptions = [NSDictionary dictionaryWithObjectsAndKeys:
-        (id)kCFBooleanTrue, (id)kCGImageSourceCreateThumbnailFromImageAlways,
-        [NSNumber numberWithUnsignedInteger:maximumPixelSize], (id)kCGImageSourceThumbnailMaxPixelSize,
-        nil];
-
-    NSMutableArray *frames = [NSMutableArray arrayWithCapacity:selectedFrames];
-    NSTimeInterval duration = 0;
-    for (size_t index = 0; index < count; index++) {
-        CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(source, index, NULL);
-        NSDictionary *gif = properties ? [(NSDictionary *)properties objectForKey:(NSString *)kCGImagePropertyGIFDictionary] : nil;
-        NSNumber *delay = [gif objectForKey:(NSString *)kCGImagePropertyGIFUnclampedDelayTime];
-        if (![delay respondsToSelector:@selector(doubleValue)] || delay.doubleValue <= 0)
-            delay = [gif objectForKey:(NSString *)kCGImagePropertyGIFDelayTime];
-        duration += delay.doubleValue > 0.01 ? delay.doubleValue : 0.1;
-        if (properties) CFRelease(properties);
-
-        if (index % stride != 0) continue;
-        CGImageRef image = CGImageSourceCreateThumbnailAtIndex(source, index, (CFDictionaryRef)thumbnailOptions);
-        if (!image) image = CGImageSourceCreateImageAtIndex(source, index, NULL);
-        if (!image) continue;
-        [frames addObject:[UIImage imageWithCGImage:image scale:scale orientation:UIImageOrientationUp]];
-        CGImageRelease(image);
-    }
-    CFRelease(source);
-    if (frames.count < 2) return nil;
-    return [UIImage animatedImageWithImages:frames duration:duration];
+    _imageView = [imageView retain];
+    _imageScale = scale > 0 ? scale : 1.0;
+    return self;
 }
 
-static UIImage *PGAnimatedGIFForManagedAsset(PLManagedAsset *asset) {
-    if (!asset) return nil;
+- (NSTimeInterval)delayForFrame:(NSUInteger)index {
+    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(_source, index, NULL);
+    NSDictionary *gif = properties ? [(NSDictionary *)properties objectForKey:(NSString *)kCGImagePropertyGIFDictionary] : nil;
+    NSNumber *delay = [gif objectForKey:(NSString *)kCGImagePropertyGIFUnclampedDelayTime];
+    if (![delay respondsToSelector:@selector(doubleValue)] || delay.doubleValue <= 0)
+        delay = [gif objectForKey:(NSString *)kCGImagePropertyGIFDelayTime];
+    NSTimeInterval interval = delay.doubleValue;
+    if (properties) CFRelease(properties);
+    return interval > 0.01 ? interval : 0.1;
+}
+
+- (BOOL)showFrameAtIndex:(NSUInteger)index {
+    NSDictionary *options = [NSDictionary dictionaryWithObject:(id)kCFBooleanFalse
+                                                          forKey:(id)kCGImageSourceShouldCache];
+    CGImageRef frame = CGImageSourceCreateImageAtIndex(_source, index, (CFDictionaryRef)options);
+    if (!frame) return NO;
+    UIImage *image = [UIImage imageWithCGImage:frame scale:_imageScale orientation:UIImageOrientationUp];
+    CGImageRelease(frame);
+    _imageView.image = image;
+    return YES;
+}
+
+- (void)scheduleNextFrame {
+    if (!_running) return;
+    NSTimeInterval delay = [self delayForFrame:_frameIndex];
+    _timer = [[NSTimer timerWithTimeInterval:delay
+                                      target:self
+                                    selector:@selector(advanceFrame:)
+                                    userInfo:nil
+                                     repeats:NO] retain];
+    [[NSRunLoop mainRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
+}
+
+- (void)start {
+    if (_running) return;
+    _running = [self showFrameAtIndex:0];
+    _frameIndex = 0;
+    [self scheduleNextFrame];
+}
+
+- (void)advanceFrame:(NSTimer *)timer {
+    [_timer release];
+    _timer = nil;
+    if (!_running) return;
+    _frameIndex = (_frameIndex + 1) % _frameCount;
+    if (![self showFrameAtIndex:_frameIndex]) {
+        _running = NO;
+        return;
+    }
+    [self scheduleNextFrame];
+}
+
+- (void)stop {
+    _running = NO;
+    [_timer invalidate];
+    [_timer release];
+    _timer = nil;
+}
+
+- (void)dealloc {
+    [self stop];
+    if (_source) CFRelease(_source);
+    [_imageView release];
+    [super dealloc];
+}
+
+@end
+
+static char PGGIFPlayerKey;
+
+static UIImageView *PGFindImageView(UIView *view, UIImage *image) {
+    if ([view isKindOfClass:[UIImageView class]] && [(UIImageView *)view image] == image)
+        return (UIImageView *)view;
+    for (UIView *subview in [view subviews]) {
+        UIImageView *match = PGFindImageView(subview, image);
+        if (match) return match;
+    }
+    return nil;
+}
+
+@interface PLPhotoTileViewController (PGGIFSupport)
+- (void)pg_startGIFForImage:(id)image;
+- (void)pg_stopGIFPlayer;
+@end
+
+@implementation PLPhotoTileViewController (PGGIFSupport)
+
+- (void)pg_stopGIFPlayer {
+    PGGIFPlayer *player = (PGGIFPlayer *)objc_getAssociatedObject(self, &PGGIFPlayerKey);
+    [player stop];
+    objc_setAssociatedObject(self, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (void)pg_startGIFForImage:(id)image {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:@selector(pg_startGIFForImage:) withObject:image waitUntilDone:NO];
+        return;
+    }
+    if (![image isKindOfClass:[UIImage class]]) return;
+
     id type = nil;
-    id data = [asset largestAvailableDataRepresentationAndType:&type];
-    if (![data isKindOfClass:[NSData class]]) return nil;
-    return PGAnimatedGIF((NSData *)data, 1.0);
+    id data = [[self photo] largestAvailableDataRepresentationAndType:&type];
+    if (![data isKindOfClass:[NSData class]] || [data length] < 6) return;
+    const unsigned char *bytes = (const unsigned char *)[(NSData *)data bytes];
+    if (memcmp(bytes, "GIF87a", 6) && memcmp(bytes, "GIF89a", 6)) return;
+
+    UIImageView *imageView = PGFindImageView([self view], (UIImage *)image);
+    if (!imageView) return;
+
+    CGFloat scale = [(UIImage *)image respondsToSelector:@selector(scale)] ? [(UIImage *)image scale] : 1.0;
+    PGGIFPlayer *player = [[PGGIFPlayer alloc] initWithData:(NSData *)data imageView:imageView scale:scale];
+    if (!player) return;
+    objc_setAssociatedObject(self, &PGGIFPlayerKey, player, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [player start];
+    [player release];
 }
+
+@end
 
 %hook PLPhotoTileViewController
 
 - (void)setFullSizeImage:(id)image {
-    UIImage *animated = PGAnimatedGIFForManagedAsset([self photo]);
-    %orig(animated ? animated : image);
+    [self pg_stopGIFPlayer];
+    %orig(image);
+    if ([NSThread isMainThread]) {
+        [self performSelector:@selector(pg_startGIFForImage:) withObject:image afterDelay:0.05];
+    } else {
+        [self performSelectorOnMainThread:@selector(pg_startGIFForImage:) withObject:image waitUntilDone:NO];
+    }
+}
+
+- (void)viewDidDisappear:(BOOL)animated {
+    %orig(animated);
+    [self pg_stopGIFPlayer];
 }
 
 %end
 
-%hook UIImage
-
-- (id)initWithData:(NSData *)data {
-    UIImage *animated = PGAnimatedGIF(data, 1.0);
-    if (animated) {
-        [self release];
-        return [animated retain];
-    }
-    return %orig(data);
-}
-
-- (id)initWithData:(NSData *)data scale:(CGFloat)scale {
-    UIImage *animated = PGAnimatedGIF(data, scale);
-    if (animated) {
-        [self release];
-        return [animated retain];
-    }
-    return %orig(data, scale);
-}
-
-- (id)initWithContentsOfFile:(NSString *)path {
-    if ([[[path pathExtension] lowercaseString] isEqualToString:@"gif"]) {
-        UIImage *animated = PGAnimatedGIF([NSData dataWithContentsOfFile:path], 1.0);
-        if (animated) {
-            [self release];
-            return [animated retain];
-        }
-    }
-    return %orig(path);
-}
-
-+ (UIImage *)imageWithData:(NSData *)data {
-    UIImage *animated = PGAnimatedGIF(data, 1.0);
-    return animated ? animated : %orig(data);
-}
-
-+ (UIImage *)imageWithData:(NSData *)data scale:(CGFloat)scale {
-    UIImage *animated = PGAnimatedGIF(data, scale);
-    return animated ? animated : %orig(data, scale);
-}
-
-+ (UIImage *)imageWithContentsOfFile:(NSString *)path {
-    if ([[[path pathExtension] lowercaseString] isEqualToString:@"gif"]) {
-        UIImage *animated = PGAnimatedGIF([NSData dataWithContentsOfFile:path], 1.0);
-        if (animated) return animated;
-    }
-    return %orig(path);
-}
-
-%end
