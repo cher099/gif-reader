@@ -1,29 +1,26 @@
-# GIF Reader
+# Photos GIF
 
-GIF Reader is a small UIKit application for jailbroken iPhone 4S devices. It browses folders under `/var/mobile/Media`, lists GIF files, and plays their frames with ImageIO and `UIImageView` animation.
+Photos GIF is a jailbreak tweak for iPhone 4S on iOS 6.1.3. It hooks image decoding inside the stock Photos app and supplies animated UIImage frames for GIF data, so a GIF can animate in the Photos viewer.
 
 ## Compatibility target
 
-- iOS deployment target: 6.0 (intended to run on iOS 6.1.3)
-- CPU: armv7 (iPhone 4S)
-- APIs: UIKit, Foundation, ImageIO, and CoreGraphics, all available before iOS 6. No Swift, extensions, modern photo-picker APIs, or newer image animation APIs are used.
+- iOS deployment target: 6.0 (intended for iOS 6.1.3)
+- CPU: armv7
+- Injection filter: stock Photos bundle, `com.apple.mobileslideshow`
+- Uses UIKit, Foundation, ImageIO, and CoreGraphics APIs available on iOS 6.
 
-## Build on macOS
+## Build
 
-The included GitHub Actions workflow builds on each push and can also be started manually from the Actions tab. It installs Theos, reassembles the split iOS 6.1 SDK, builds the rootful armv7 package, and saves the `.deb` as an Actions artifact named `GIF-Reader-deb`.
+The included GitHub Actions workflow builds the rootful armv7 Debian package on each push and can also be started manually. It assembles the split iOS 6.1 SDK, compiles the tweak, and uploads the `.deb` as an Actions artifact named `Photos-GIF-deb`.
 
-For a local build, install Theos and an iOS 6.1-capable SDK/toolchain on macOS, then from this directory run:
+For a local build with Theos and the iOS 6.1 SDK installed:
 
 ```sh
 make package
 ```
 
-Rootful is Theos' default package layout, which matches classic iOS 6 jailbreaks. The generated `.deb` is normally placed under `packages/`.
+## Install and use
 
-## Install
+Install `Photos-GIF-deb` with Cydia or Filza. Save an animated GIF to Camera Roll, fully close Photos, then reopen Photos and tap the GIF to view it. Thumbnail previews may remain static; animation is intended for the full-screen viewer.
 
-Copy GIF files into `/var/mobile/Media` or a subfolder using a file manager. Install the generated package with Cydia or Filza, then launch GIF Reader from SpringBoard. Filza can also open the `.deb` directly.
-
-## Build status
-
-A successful GitHub Actions run confirms that the source compiles and the `.deb` packages correctly. This project has not yet been built on this workspace. The app browses `/var/mobile/Media`; it does not integrate with the Photos app or download GIFs.
+The tweak is injected only into Photos. It does not add a separate app icon or import/download GIFs. Runtime behavior still needs testing on the target iPhone 4S running iOS 6.1.3.

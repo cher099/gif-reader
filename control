@@ -1,10 +1,10 @@
-Package: com.cher099.gifreader
-Name: GIF Reader
+Package: com.cher099.photosgif
+Name: Photos GIF
 Version: 1.0.0
 Architecture: iphoneos-arm
-Description: Browse and play animated GIF files.
-Maintainer: GIF Reader
-Author: GIF Reader
-Section: Multimedia
+Description: Play animated GIFs in the iOS Photos viewer.
+Maintainer: Photos GIF
+Author: Photos GIF
+Section: Tweaks
 Priority: optional
-Depends: firmware (>= 6.0)
+Depends: firmware (>= 6.0), mobilesubstrate
