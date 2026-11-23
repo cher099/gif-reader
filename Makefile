@@ -5,6 +5,6 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = PhotosGIF
 PhotosGIF_FILES = Tweak.xm
-PhotosGIF_FRAMEWORKS = UIKit Foundation ImageIO CoreGraphics
+PhotosGIF_FRAMEWORKS = UIKit Foundation ImageIO CoreGraphics AssetsLibrary
 
 include $(THEOS_MAKE_PATH)/tweak.mk

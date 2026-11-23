@@ -1,13 +1,13 @@
 # Photos GIF
 
-Photos GIF is a jailbreak tweak for iPhone 4S on iOS 6.1.3. It hooks image decoding inside the stock Photos app and supplies animated UIImage frames for GIF data, so a GIF can animate in the Photos viewer.
+Photos GIF is a jailbreak tweak for iPhone 4S on iOS 6.1.3. It hooks the iOS 6 Assets Library full-screen image path and maps GIF representations to animated UIImage frames for the Photos viewer. It also handles GIFs loaded through UIImage data/file APIs.
 
 ## Compatibility target
 
 - iOS deployment target: 6.0 (intended for iOS 6.1.3)
 - CPU: armv7
 - Injection filter: stock Photos bundle, `com.apple.mobileslideshow`
-- Uses UIKit, Foundation, ImageIO, and CoreGraphics APIs available on iOS 6.
+- Uses UIKit, Foundation, ImageIO, CoreGraphics, and AssetsLibrary APIs available on iOS 6.
 
 ## Build
 
