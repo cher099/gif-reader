@@ -1,9 +1,15 @@
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
-#import <AssetsLibrary/AssetsLibrary.h>
 #import <string.h>
 
-static NSMutableDictionary *PGAnimatedImagesByCGImage;
+@interface PLManagedAsset : NSObject
+- (id)largestAvailableDataRepresentationAndType:(id *)type;
+@end
+
+@interface PLPhotoTileViewController : UIViewController
+@property(readonly, nonatomic) PLManagedAsset *photo;
+- (void)setFullSizeImage:(id)image;
+@end
 
 static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
     if (data.length < 6) return nil;
@@ -35,88 +41,24 @@ static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
     return [UIImage animatedImageWithImages:frames duration:duration];
 }
 
-static UIImage *PGAnimatedGIFForRepresentation(ALAssetRepresentation *representation) {
-    NSString *uti = [[representation UTI] lowercaseString];
-    if (![uti isEqualToString:@"com.compuserve.gif"] && ![uti isEqualToString:@"public.gif"])
-        return nil;
-
-    long long length = [representation size];
-    if (length <= 0 || length > 64LL * 1024LL * 1024LL) return nil;
-
-    NSMutableData *data = [NSMutableData dataWithLength:(NSUInteger)length];
-    uint8_t *bytes = (uint8_t *)[data mutableBytes];
-    const NSUInteger chunkSize = 1024 * 1024;
-    long long offset = 0;
-    while (offset < length) {
-        NSUInteger chunk = (NSUInteger)MIN((long long)chunkSize, length - offset);
-        NSError *error = nil;
-        NSUInteger bytesRead = [representation getBytes:bytes + (NSUInteger)offset
-                                              fromOffset:offset
-                                                  length:chunk
-                                                   error:&error];
-        if (error || bytesRead != chunk) return nil;
-        offset += bytesRead;
-    }
-    return PGAnimatedGIF(data, 1.0);
+static UIImage *PGAnimatedGIFForManagedAsset(PLManagedAsset *asset) {
+    if (!asset) return nil;
+    id type = nil;
+    id data = [asset largestAvailableDataRepresentationAndType:&type];
+    if (![data isKindOfClass:[NSData class]]) return nil;
+    return PGAnimatedGIF((NSData *)data, 1.0);
 }
 
-%hook ALAssetRepresentation
+%hook PLPhotoTileViewController
 
-- (CGImageRef)fullScreenImage {
-    CGImageRef image = %orig;
-    if (image) {
-        UIImage *animated = PGAnimatedGIFForRepresentation(self);
-        if (animated) {
-            if (!PGAnimatedImagesByCGImage) PGAnimatedImagesByCGImage = [[NSMutableDictionary alloc] init];
-            [PGAnimatedImagesByCGImage setObject:animated forKey:[NSValue valueWithPointer:image]];
-        }
-    }
-    return image;
-}
-
-- (CGImageRef)fullResolutionImage {
-    CGImageRef image = %orig;
-    if (image) {
-        UIImage *animated = PGAnimatedGIFForRepresentation(self);
-        if (animated) {
-            if (!PGAnimatedImagesByCGImage) PGAnimatedImagesByCGImage = [[NSMutableDictionary alloc] init];
-            [PGAnimatedImagesByCGImage setObject:animated forKey:[NSValue valueWithPointer:image]];
-        }
-    }
-    return image;
+- (void)setFullSizeImage:(id)image {
+    UIImage *animated = PGAnimatedGIFForManagedAsset([self photo]);
+    %orig(animated ? animated : image);
 }
 
 %end
 
 %hook UIImage
-
-- (id)initWithCGImage:(CGImageRef)image {
-    UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
-    if (animated) {
-        [self release];
-        return [animated retain];
-    }
-    return %orig(image);
-}
-
-- (id)initWithCGImage:(CGImageRef)image scale:(CGFloat)scale orientation:(UIImageOrientation)orientation {
-    UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
-    if (animated) {
-        [self release];
-        return [animated retain];
-    }
-    return %orig(image, scale, orientation);
-}
-
-+ (UIImage *)imageWithCGImage:(CGImageRef)image {
-    UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
-    return animated ? animated : %orig(image);
-}
-
-+ (UIImage *)imageWithCGImage:(CGImageRef)image scale:(CGFloat)scale orientation:(UIImageOrientation)orientation {
-    UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
-    return animated ? animated : %orig(image, scale, orientation);
-}
 
 + (UIImage *)imageWithData:(NSData *)data {
     UIImage *animated = PGAnimatedGIF(data, 1.0);
