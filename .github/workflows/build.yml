@@ -19,6 +19,14 @@ jobs:
         with:
           theos-sdks: https://github.com/Sn0wCooder/theos-sdks
 
+      - name: Assemble the split iOS 6.1 SDK
+        run: |
+          sdk_parts="$THEOS/sdks/iPhoneOS6.1.sdk"
+          cat "$sdk_parts"/iPhoneOS6.1.sdk.zip.00* > "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip"
+          unzip -q "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip" -d "$THEOS/sdks"
+          test -f "$THEOS/sdks/iPhoneOS6.1.sdk/System/Library/Frameworks/Foundation.framework/Headers/Foundation.h"
+          rm -rf "$sdk_parts" "$RUNNER_TEMP/iPhoneOS6.1.sdk.zip"
+
       - name: Build rootful armv7 package
         run: make package
 
