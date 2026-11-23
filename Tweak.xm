@@ -20,15 +20,21 @@
     NSTimer *_timer;
     CGFloat _imageScale;
     BOOL _running;
+    PLPhotoTileViewController *_controller;
 }
-- (id)initWithData:(NSData *)data imageView:(UIImageView *)imageView scale:(CGFloat)scale;
+- (id)initWithData:(NSData *)data imageView:(UIImageView *)imageView controller:(PLPhotoTileViewController *)controller scale:(CGFloat)scale;
 - (void)start;
 - (void)stop;
+- (UIImageView *)imageView;
+- (PLPhotoTileViewController *)controller;
 @end
+
+static char PGGIFPlayerKey;
+static BOOL PGGIFSettingFrame;
 
 @implementation PGGIFPlayer
 
-- (id)initWithData:(NSData *)data imageView:(UIImageView *)imageView scale:(CGFloat)scale {
+- (id)initWithData:(NSData *)data imageView:(UIImageView *)imageView controller:(PLPhotoTileViewController *)controller scale:(CGFloat)scale {
     self = [super init];
     if (!self) return nil;
 
@@ -41,6 +47,7 @@
         return nil;
     }
     _imageView = [imageView retain];
+    _controller = controller;
     _imageScale = scale > 0 ? scale : 1.0;
     return self;
 }
@@ -63,7 +70,10 @@
     if (!frame) return NO;
     UIImage *image = [UIImage imageWithCGImage:frame scale:_imageScale orientation:UIImageOrientationUp];
     CGImageRelease(frame);
+    BOOL wasSettingFrame = PGGIFSettingFrame;
+    PGGIFSettingFrame = YES;
     _imageView.image = image;
+    PGGIFSettingFrame = wasSettingFrame;
     return YES;
 }
 
@@ -104,6 +114,9 @@
     _timer = nil;
 }
 
+- (UIImageView *)imageView { return _imageView; }
+- (PLPhotoTileViewController *)controller { return _controller; }
+
 - (void)dealloc {
     [self stop];
     if (_source) CFRelease(_source);
@@ -112,8 +125,6 @@
 }
 
 @end
-
-static char PGGIFPlayerKey;
 
 static UIImageView *PGFindImageView(UIView *view, UIImage *image) {
     if ([view isKindOfClass:[UIImageView class]] && [(UIImageView *)view image] == image)
@@ -126,9 +137,13 @@ static UIImageView *PGFindImageView(UIView *view, UIImage *image) {
 }
 
 static void PGStopGIFPlayer(PLPhotoTileViewController *controller) {
-    PGGIFPlayer *player = (PGGIFPlayer *)objc_getAssociatedObject(controller, &PGGIFPlayerKey);
+    PGGIFPlayer *player = [(PGGIFPlayer *)objc_getAssociatedObject(controller, &PGGIFPlayerKey) retain];
     [player stop];
+    UIImageView *imageView = [player imageView];
+    if (objc_getAssociatedObject(imageView, &PGGIFPlayerKey) == player)
+        objc_setAssociatedObject(imageView, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_ASSIGN);
     objc_setAssociatedObject(controller, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [player release];
 }
 
 static void PGStartGIFPlayer(PLPhotoTileViewController *controller, id image) {
@@ -144,11 +159,25 @@ static void PGStartGIFPlayer(PLPhotoTileViewController *controller, id image) {
     if (!imageView) return;
 
     CGFloat scale = [(UIImage *)image respondsToSelector:@selector(scale)] ? [(UIImage *)image scale] : 1.0;
-    PGGIFPlayer *player = [[PGGIFPlayer alloc] initWithData:(NSData *)data imageView:imageView scale:scale];
+    PGGIFPlayer *player = [[PGGIFPlayer alloc] initWithData:(NSData *)data imageView:imageView controller:controller scale:scale];
     if (!player) return;
     objc_setAssociatedObject(controller, &PGGIFPlayerKey, player, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(imageView, &PGGIFPlayerKey, player, OBJC_ASSOCIATION_ASSIGN);
     [player start];
     [player release];
+}
+
+static void PGStopGIFPlayersInView(UIView *view) {
+    PGGIFPlayer *player = [(PGGIFPlayer *)objc_getAssociatedObject(view, &PGGIFPlayerKey) retain];
+    if (player) {
+        [player stop];
+        PLPhotoTileViewController *controller = [player controller];
+        if (objc_getAssociatedObject(controller, &PGGIFPlayerKey) == player)
+            objc_setAssociatedObject(controller, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(view, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_ASSIGN);
+        [player release];
+    }
+    for (UIView *subview in [view subviews]) PGStopGIFPlayersInView(subview);
 }
 
 @interface PGGIFInstaller : NSObject {
@@ -180,6 +209,7 @@ static void PGStartGIFPlayer(PLPhotoTileViewController *controller, id image) {
 %hook PLPhotoTileViewController
 
 - (void)setFullSizeImage:(id)image {
+    PGStopGIFPlayersInView([self view]);
     PGStopGIFPlayer(self);
     %orig(image);
     PGGIFInstaller *installer = [[PGGIFInstaller alloc] initWithController:self image:image];
@@ -193,7 +223,33 @@ static void PGStartGIFPlayer(PLPhotoTileViewController *controller, id image) {
 
 - (void)viewDidDisappear:(BOOL)animated {
     %orig(animated);
+    PGStopGIFPlayersInView([self view]);
     PGStopGIFPlayer(self);
+}
+
+- (void)dealloc {
+    if ([self isViewLoaded]) PGStopGIFPlayersInView([self view]);
+    PGStopGIFPlayer(self);
+    %orig;
+}
+
+%end
+
+%hook UIImageView
+
+- (void)setImage:(UIImage *)image {
+    if (!PGGIFSettingFrame) {
+        PGGIFPlayer *player = [(PGGIFPlayer *)objc_getAssociatedObject(self, &PGGIFPlayerKey) retain];
+        if (player) {
+            [player stop];
+            PLPhotoTileViewController *controller = [player controller];
+            if (objc_getAssociatedObject(controller, &PGGIFPlayerKey) == player)
+                objc_setAssociatedObject(controller, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            objc_setAssociatedObject(self, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_ASSIGN);
+            [player release];
+        }
+    }
+    %orig(image);
 }
 
 %end
