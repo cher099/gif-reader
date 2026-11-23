@@ -60,6 +60,35 @@ static UIImage *PGAnimatedGIFForManagedAsset(PLManagedAsset *asset) {
 
 %hook UIImage
 
+- (id)initWithData:(NSData *)data {
+    UIImage *animated = PGAnimatedGIF(data, 1.0);
+    if (animated) {
+        [self release];
+        return [animated retain];
+    }
+    return %orig(data);
+}
+
+- (id)initWithData:(NSData *)data scale:(CGFloat)scale {
+    UIImage *animated = PGAnimatedGIF(data, scale);
+    if (animated) {
+        [self release];
+        return [animated retain];
+    }
+    return %orig(data, scale);
+}
+
+- (id)initWithContentsOfFile:(NSString *)path {
+    if ([[[path pathExtension] lowercaseString] isEqualToString:@"gif"]) {
+        UIImage *animated = PGAnimatedGIF([NSData dataWithContentsOfFile:path], 1.0);
+        if (animated) {
+            [self release];
+            return [animated retain];
+        }
+    }
+    return %orig(path);
+}
+
 + (UIImage *)imageWithData:(NSData *)data {
     UIImage *animated = PGAnimatedGIF(data, 1.0);
     return animated ? animated : %orig(data);
