@@ -2,7 +2,7 @@
 
 Photos GIF is a jailbreak tweak for iPhone 4S on iOS 6.1.3 that adds animated GIF playback to the stock Photos app's full-screen viewer.
 
-Long or large GIFs are frame-sampled and downsampled to limit memory use on older devices. This can make very long animations look less smooth or detailed.
+Long or large GIFs are frame-sampled and downsampled to limit memory use on older devices. This can make very long animations look less smooth or detailed. The limit is conservative because Photos may keep recently viewed images in memory.
 
 ## Compatibility target
 

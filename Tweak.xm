@@ -28,8 +28,8 @@ static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
 
     // UIImage's animated image keeps every decoded frame in memory. Bound that
     // cost for older devices by sampling long GIFs and downsampling each frame.
-    const size_t maximumFrames = 48;
-    const double maximumDecodedPixels = 6000000.0;
+    const size_t maximumFrames = 40;
+    const double maximumDecodedPixels = 2500000.0;
     size_t stride = (count + maximumFrames - 1) / maximumFrames;
     if (stride < 1) stride = 1;
     size_t selectedFrames = (count + stride - 1) / stride;
