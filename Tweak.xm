@@ -125,60 +125,75 @@ static UIImageView *PGFindImageView(UIView *view, UIImage *image) {
     return nil;
 }
 
-@interface PLPhotoTileViewController (PGGIFSupport)
-- (void)pg_startGIFForImage:(id)image;
-- (void)pg_stopGIFPlayer;
-@end
-
-@implementation PLPhotoTileViewController (PGGIFSupport)
-
-- (void)pg_stopGIFPlayer {
-    PGGIFPlayer *player = (PGGIFPlayer *)objc_getAssociatedObject(self, &PGGIFPlayerKey);
+static void PGStopGIFPlayer(PLPhotoTileViewController *controller) {
+    PGGIFPlayer *player = (PGGIFPlayer *)objc_getAssociatedObject(controller, &PGGIFPlayerKey);
     [player stop];
-    objc_setAssociatedObject(self, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(controller, &PGGIFPlayerKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-- (void)pg_startGIFForImage:(id)image {
-    if (![NSThread isMainThread]) {
-        [self performSelectorOnMainThread:@selector(pg_startGIFForImage:) withObject:image waitUntilDone:NO];
-        return;
-    }
+static void PGStartGIFPlayer(PLPhotoTileViewController *controller, id image) {
     if (![image isKindOfClass:[UIImage class]]) return;
 
     id type = nil;
-    id data = [[self photo] largestAvailableDataRepresentationAndType:&type];
+    id data = [[controller photo] largestAvailableDataRepresentationAndType:&type];
     if (![data isKindOfClass:[NSData class]] || [data length] < 6) return;
     const unsigned char *bytes = (const unsigned char *)[(NSData *)data bytes];
     if (memcmp(bytes, "GIF87a", 6) && memcmp(bytes, "GIF89a", 6)) return;
 
-    UIImageView *imageView = PGFindImageView([self view], (UIImage *)image);
+    UIImageView *imageView = PGFindImageView([controller view], (UIImage *)image);
     if (!imageView) return;
 
     CGFloat scale = [(UIImage *)image respondsToSelector:@selector(scale)] ? [(UIImage *)image scale] : 1.0;
     PGGIFPlayer *player = [[PGGIFPlayer alloc] initWithData:(NSData *)data imageView:imageView scale:scale];
     if (!player) return;
-    objc_setAssociatedObject(self, &PGGIFPlayerKey, player, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(controller, &PGGIFPlayerKey, player, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     [player start];
     [player release];
 }
 
+@interface PGGIFInstaller : NSObject {
+    PLPhotoTileViewController *_controller;
+    id _image;
+}
+- (id)initWithController:(PLPhotoTileViewController *)controller image:(id)image;
+- (void)install;
+@end
+
+@implementation PGGIFInstaller
+- (id)initWithController:(PLPhotoTileViewController *)controller image:(id)image {
+    self = [super init];
+    if (!self) return nil;
+    _controller = [controller retain];
+    _image = [image retain];
+    return self;
+}
+- (void)install {
+    PGStartGIFPlayer(_controller, _image);
+}
+- (void)dealloc {
+    [_controller release];
+    [_image release];
+    [super dealloc];
+}
 @end
 
 %hook PLPhotoTileViewController
 
 - (void)setFullSizeImage:(id)image {
-    [self pg_stopGIFPlayer];
+    PGStopGIFPlayer(self);
     %orig(image);
+    PGGIFInstaller *installer = [[PGGIFInstaller alloc] initWithController:self image:image];
     if ([NSThread isMainThread]) {
-        [self performSelector:@selector(pg_startGIFForImage:) withObject:image afterDelay:0.05];
+        [installer performSelector:@selector(install) withObject:nil afterDelay:0.05];
     } else {
-        [self performSelectorOnMainThread:@selector(pg_startGIFForImage:) withObject:image waitUntilDone:NO];
+        [installer performSelectorOnMainThread:@selector(install) withObject:nil waitUntilDone:NO];
     }
+    [installer release];
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
     %orig(animated);
-    [self pg_stopGIFPlayer];
+    PGStopGIFPlayer(self);
 }
 
 %end
