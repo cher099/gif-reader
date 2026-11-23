@@ -35,4 +35,4 @@ make package
 
 ## License
 
-This project is provided for the owner's personal use. See [LICENSE](LICENSE) for the terms.
+This project is licensed under the GNU General Public License version 3. See [LICENSE](LICENSE) for the full terms.
