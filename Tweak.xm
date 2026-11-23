@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <ImageIO/ImageIO.h>
+#import <string.h>
 
 static UIImage *PGAnimatedGIF(NSData *data, CGFloat scale) {
     if (data.length < 6) return nil;
