@@ -18,7 +18,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Giffy";
+    self.title = @"GIF Reader";
     self.navigationItem.prompt = @"Browse folders and tap a GIF to play";
     [self reloadEntries];
 }
@@ -55,7 +55,7 @@
 
 - (void)goToMedia {
     self.directory = @"/var/mobile/Media";
-    self.title = @"Giffy";
+    self.title = @"GIF Reader";
     [self reloadEntries];
 }
 

@@ -1,8 +1,8 @@
 #import <UIKit/UIKit.h>
-#import "GiffyAppDelegate.h"
+#import "GIFReaderAppDelegate.h"
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
-        return UIApplicationMain(argc, argv, nil, NSStringFromClass([GiffyAppDelegate class]));
+        return UIApplicationMain(argc, argv, nil, NSStringFromClass([GIFReaderAppDelegate class]));
     }
 }

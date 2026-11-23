@@ -1,5 +1,5 @@
 #import <UIKit/UIKit.h>
 
-@interface GiffyAppDelegate : NSObject <UIApplicationDelegate>
+@interface GIFReaderAppDelegate : NSObject <UIApplicationDelegate>
 @property (nonatomic, retain) UIWindow *window;
 @end

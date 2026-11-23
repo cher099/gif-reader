@@ -1,7 +1,7 @@
-#import "GiffyAppDelegate.h"
+#import "GIFReaderAppDelegate.h"
 #import "BrowserViewController.h"
 
-@implementation GiffyAppDelegate
+@implementation GIFReaderAppDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
     BrowserViewController *browser = [[[BrowserViewController alloc] init] autorelease];

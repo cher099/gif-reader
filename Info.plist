@@ -3,10 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key><string>English</string>
-	<key>CFBundleExecutable</key><string>Giffy</string>
-	<key>CFBundleIdentifier</key><string>com.giffy.viewer</string>
+	<key>CFBundleExecutable</key><string>GIFReader</string>
+	<key>CFBundleIdentifier</key><string>com.cher099.gifreader</string>
 	<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-	<key>CFBundleName</key><string>Giffy</string>
+	<key>CFBundleDisplayName</key><string>GIF Reader</string>
+	<key>CFBundleName</key><string>GIF Reader</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>CFBundleShortVersionString</key><string>1.0.0</string>
 	<key>CFBundleVersion</key><string>1</string>

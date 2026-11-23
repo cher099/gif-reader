@@ -1,6 +1,6 @@
-# Giffy
+# GIF Reader
 
-Giffy is a small UIKit application for jailbroken iPhone 4S devices. It browses folders under `/var/mobile/Media`, lists GIF files, and plays their frames with ImageIO and `UIImageView` animation.
+GIF Reader is a small UIKit application for jailbroken iPhone 4S devices. It browses folders under `/var/mobile/Media`, lists GIF files, and plays their frames with ImageIO and `UIImageView` animation.
 
 ## Compatibility target
 
@@ -10,7 +10,7 @@ Giffy is a small UIKit application for jailbroken iPhone 4S devices. It browses 
 
 ## Build on macOS
 
-The included GitHub Actions workflow builds on each push and can also be started manually from the Actions tab. It installs Theos, reassembles the split iOS 6.1 SDK, builds the rootful armv7 package, and saves the `.deb` as an Actions artifact named `Giffy-deb`.
+The included GitHub Actions workflow builds on each push and can also be started manually from the Actions tab. It installs Theos, reassembles the split iOS 6.1 SDK, builds the rootful armv7 package, and saves the `.deb` as an Actions artifact named `GIF-Reader-deb`.
 
 For a local build, install Theos and an iOS 6.1-capable SDK/toolchain on macOS, then from this directory run:
 
@@ -22,7 +22,7 @@ Rootful is Theos' default package layout, which matches classic iOS 6 jailbreaks
 
 ## Install
 
-Copy GIF files into `/var/mobile/Media` or a subfolder using a file manager. Install the generated package with Cydia or Filza, then launch Giffy from SpringBoard. Filza can also open the `.deb` directly.
+Copy GIF files into `/var/mobile/Media` or a subfolder using a file manager. Install the generated package with Cydia or Filza, then launch GIF Reader from SpringBoard. Filza can also open the `.deb` directly.
 
 ## Build status
 
