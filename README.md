@@ -1,19 +1,31 @@
 # Photos GIF
 
-Photos GIF is a jailbreak tweak for iPhone 4S on iOS 6.1.3 that adds animated GIF playback to the stock Photos app's full-screen viewer.
+Photos GIF is a jailbreak tweak for iPhone 4S running iOS 6.1.3. It adds animated GIF playback to the stock Photos app's full-screen viewer.
 
-GIF frames are decoded on demand at their original size. Photos GIF keeps only the current frame decoded and replaces it as playback advances, so it does not need to hold a full animation's decoded frames in memory.
+## How it works
 
-## Compatibility target
+GIF frames are decoded on demand at their original size. The tweak keeps the current frame in memory and replaces it as playback advances, instead of keeping every decoded frame at once.
 
-- iOS deployment target: 6.0 (intended for iOS 6.1.3)
-- CPU: armv7
-- Injection filter: stock Photos app (`com.apple.mobileslideshow`)
-- Uses UIKit, Foundation, and ImageIO APIs available on iOS 6, plus the private PhotoLibrary tile hook from that OS generation.
+## Compatibility
+
+- iOS 6.0 or later; built for iOS 6.1.3
+- ARMv7, including iPhone 4S
+- Injects into the stock Photos app (`com.apple.mobileslideshow`)
+- Uses UIKit and ImageIO APIs available on iOS 6, plus the Photos framework hook used by that version
+
+## Known limitation
+
+Swiping backward to a GIF in the full-screen viewer may freeze Photos. To view that GIF, return to Camera Roll and open it again. Opening a GIF directly in iFile is not supported.
+
+## Install
+
+Download the `Photos-GIF-deb` artifact from the repository's GitHub Actions build, extract the ZIP, and install the `.deb` with Cydia or Filza. The package updates the existing `com.cher099.photosgif` installation.
+
+The build workflow names the package `Photos-GIF_<version>_iphoneos-arm.deb`.
 
 ## Build
 
-GitHub Actions builds the rootful armv7 Debian package on each push and can also be started manually. It assembles the split iOS 6.1 SDK, compiles the tweak, and uploads the `.deb` as an Actions artifact.
+GitHub Actions builds a rootful ARMv7 Debian package for iOS 6.1. It assembles the split SDK, compiles the tweak, and uploads the package as an artifact.
 
 For a local build with Theos and the iOS 6.1 SDK installed:
 
@@ -21,9 +33,6 @@ For a local build with Theos and the iOS 6.1 SDK installed:
 make package
 ```
 
-## Install and use
+## License
 
-Install the `.deb` with Cydia or Filza, then open a GIF in the Photos app and view it full-screen. Thumbnail previews may remain static. Opening a GIF directly in iFile is outside this tweak's scope.
-
-The tweak does not add a separate app icon or import/download GIFs. Runtime behavior still needs testing on the target iPhone 4S running iOS 6.1.3.
-
+This project is provided for the owner's personal use. See [LICENSE](LICENSE) for the terms.

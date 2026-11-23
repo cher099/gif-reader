@@ -33,9 +33,17 @@ jobs:
       - name: Build rootful armv7 package
         run: make package
 
+      - name: Give package a friendly filename
+        run: |
+          version="$(sed -n 's/^Version: //p' control)"
+          deb_path="$(find packages -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          test -n "$version"
+          test -n "$deb_path"
+          mv "$deb_path" "packages/Photos-GIF_${version}_iphoneos-arm.deb"
+
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
           name: Photos-GIF-deb
-          path: packages/*.deb
+          path: packages/Photos-GIF_*.deb
           if-no-files-found: error
