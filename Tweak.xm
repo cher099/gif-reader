@@ -90,6 +90,24 @@ static UIImage *PGAnimatedGIFForRepresentation(ALAssetRepresentation *representa
 
 %hook UIImage
 
+- (id)initWithCGImage:(CGImageRef)image {
+    UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
+    if (animated) {
+        [self release];
+        return [animated retain];
+    }
+    return %orig(image);
+}
+
+- (id)initWithCGImage:(CGImageRef)image scale:(CGFloat)scale orientation:(UIImageOrientation)orientation {
+    UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
+    if (animated) {
+        [self release];
+        return [animated retain];
+    }
+    return %orig(image, scale, orientation);
+}
+
 + (UIImage *)imageWithCGImage:(CGImageRef)image {
     UIImage *animated = [PGAnimatedImagesByCGImage objectForKey:[NSValue valueWithPointer:image]];
     return animated ? animated : %orig(image);
