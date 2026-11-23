@@ -10,7 +10,7 @@ Giffy is a small UIKit application for jailbroken iPhone 4S devices. It browses 
 
 ## Build on macOS
 
-The included GitHub Actions workflow builds on each push and can also be started manually from the Actions tab. It installs Theos and the iOS 6.1 SDK, builds the rootful armv7 package, and saves the `.deb` as an Actions artifact named `Giffy-deb`.
+The included GitHub Actions workflow builds on each push and can also be started manually from the Actions tab. It installs Theos, reassembles the split iOS 6.1 SDK, builds the rootful armv7 package, and saves the `.deb` as an Actions artifact named `Giffy-deb`.
 
 For a local build, install Theos and an iOS 6.1-capable SDK/toolchain on macOS, then from this directory run:
 
@@ -26,4 +26,4 @@ Copy GIF files into `/var/mobile/Media` or a subfolder using a file manager. Ins
 
 ## Build status
 
-The first GitHub Actions run will confirm that the source compiles and the `.deb` packages correctly. This project has not yet been built on this workspace. The app browses `/var/mobile/Media`; it does not integrate with the Photos app or download GIFs.
+A successful GitHub Actions run confirms that the source compiles and the `.deb` packages correctly. This project has not yet been built on this workspace. The app browses `/var/mobile/Media`; it does not integrate with the Photos app or download GIFs.
