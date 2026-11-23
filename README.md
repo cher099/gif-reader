@@ -1,6 +1,12 @@
 # Photos GIF
 
-Photos GIF is a jailbreak tweak for iPhone 4S running iOS 6.1.3. It adds animated GIF playback to the stock Photos app's full-screen viewer.
+Photos GIF is a jailbreak tweak that adds animated GIF playback to the stock Photos app's full-screen viewer on iPhone 4S and iOS 6.1.3.
+
+## Project credits
+
+This is an AI-assisted project. The project owner, `cher099`, provides the technical direction, requirements, and on-device testing. OpenAI Codex is the AI developer responsible for implementation and documentation.
+
+The idea was inspired by Giffy from the BigBoss repository. Photos GIF is a separate project.
 
 ## How it works
 
@@ -19,9 +25,9 @@ Swiping backward to a GIF in the full-screen viewer may freeze Photos. To view t
 
 ## Install
 
-Download the `Photos-GIF-deb` artifact from the repository's GitHub Actions build, extract the ZIP, and install the `.deb` with Cydia or Filza. The package updates the existing `com.cher099.photosgif` installation.
+Download the `.deb` package from the [latest GitHub release](https://github.com/cher099/gif-reader/releases/latest) and install it with Cydia or Filza on a jailbroken device.
 
-The build workflow names the package `Photos-GIF_<version>_iphoneos-arm.deb`.
+The package updates the existing `com.cher099.photosgif` installation. Release packages use the filename `Photos-GIF_<version>_iphoneos-arm.deb`.
 
 ## Build
 
